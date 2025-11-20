@@ -12,11 +12,10 @@ See this [video](https://www.youtube.com/watch?v=_JVRew5zXBQ) for learning how t
 
 Register the code with Cloud Functions the following command. You need to create the bucket beforehand as a workspace for pdf2audiobook.
 
-`gcloud functions deploy p2a_gcs_trigger --runtime python37 --trigger-bucket <bucket> --memory=2048MB --timeout=540`
+`gcloud functions deploy p2a_gcs_trigger --gen2 --runtime python39 --trigger-bucket <bucket> --trigger-location <region> --entry-point p2a_gcs_trigger --memory=2048Mi --timeout=540s`
 
 ## Annotation
 
 - Annotation mode usage: to use pdf2audiobook for generating annotation data, set `ANNOTATION_MODE = True` and re-register the code with Cloud Funtions, so the tool will generate CSV files for annotation instead of mp3 files.
 
 - Annotation tool: use /apps-script code for running the annotation tool with Google Apps Script
-

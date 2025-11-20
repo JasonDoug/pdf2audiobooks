@@ -35,6 +35,7 @@ from google.cloud import vision
 from google.cloud import texttospeech
 from google.cloud import automl_v1beta1 as automl
 from google.protobuf import json_format
+from cloudevents.http import CloudEvent
 
 # generate PNGs for each page and labeled CSV for annotation
 ANNOTATION_MODE = False
@@ -64,14 +65,27 @@ speech_client = texttospeech.TextToSpeechClient()
 automl_client = automl.TablesClient(project=project_id, region=compute_region)
 
 
-def p2a_gcs_trigger(file, context):
+def p2a_gcs_trigger(cloudevent: CloudEvent):
+    """Cloud Function 2nd gen entry point. Triggered by a file upload to GCS."""
+    
+    data = cloudevent.data
+    event_type = cloudevent["type"]
+    print(f"Function triggered by event on file: {data.get('name')}")
+    print(f"Event type: {event_type}")
 
     # get bucket and blob
-    file_name = file["name"]
-    bucket = None
-    file_blob = None
-    while bucket == None or file_blob == None:  # retry
-        bucket = storage_client.get_bucket(file["bucket"])
+    try:
+        bucket_name = data["bucket"]
+        file_name = data["name"]
+    except (KeyError, TypeError):
+        print("Error: Invalid CloudEvent payload. Expected 'bucket' and 'name' in data.")
+        return  # Stop execution
+    
+    print(f"Processing file '{file_name}' in bucket '{bucket_name}'.")
+    bucket = storage_client.get_bucket(bucket_name)
+    file_blob = bucket.get_blob(file_name)
+    if not file_blob:
+        print(f"Error: File '{file_name}' not found in bucket '{bucket_name}'. The file may have been deleted or the function triggered prematurely.")
         file_blob = bucket.get_blob(file_name)
         time.sleep(1)
 
@@ -79,11 +93,13 @@ def p2a_gcs_trigger(file, context):
     if file_name.lower().endswith(".pdf"):
         p2a_ocr_pdf(bucket, file_blob)
         return
+    print(f"File '{file_name}' is not a PDF, skipping OCR.")
 
     # predict
     if file_name.lower().endswith(".json"):
         p2a_predict(bucket, file_blob)
         return
+    print(f"File '{file_name}' is not a JSON file, skipping prediction.")
 
     # generate speech (or generate labels for annotation)
     if file_name.lower().endswith("tables_1.csv"):
@@ -92,6 +108,7 @@ def p2a_gcs_trigger(file, context):
         else:
             p2a_generate_speech(bucket, file_blob)
         return
+    print(f"File '{file_name}' did not match any processing rules, finishing execution.")
 
 
 def p2a_ocr_pdf(bucket, pdf_blob):
