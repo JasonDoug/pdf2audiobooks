@@ -8,6 +8,14 @@ See this [video](https://www.youtube.com/watch?v=_JVRew5zXBQ) for learning how t
 2. Train a AutoML Tables model
 3. use pdf2audiobook for generating mp3 files
 
+## Prerequisites
+
+Before deploying the function, you need to enable the necessary Google Cloud APIs. You can do this by running the following command:
+
+```bash
+gcloud services enable automl.googleapis.com vision.googleapis.com texttospeech.googleapis.com storage.googleapis.com
+```
+
 ## pdf2audiobook usage
 
 Register the code with Cloud Functions the following command. You need to create the bucket beforehand as a workspace for pdf2audiobook.
